@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>For Mi Reina — I Am Here</title>
+    <style>
+        :root {
+            --bg-top: #080b18;
+            --bg-mid: #11152a;
+            --bg-bottom: #22243d;
+            --font-serif: "Georgia", "Times New Roman", serif;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --text-color: #f0e6f2;
+            --accent-warm: #ffb7b2;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            overflow: hidden;
+            background-color: #04060d;
+            font-family: var(--font-sans);
+            color: var(--text-color);
+        }
+
+        #app {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(to bottom, var(--bg-top), var(--bg-mid) 60%, var(--bg-bottom));
+            transition: background 4s ease;
+        }
+
+        /* Ambient Canvas */
+        #starsCanvas, #particleCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #starsCanvas { z-index: 1; }
+        #particleCanvas { z-index: 5; }
+
+        /* Scene & Camera Container */
+        .stage {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .camera-viewport {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            height: 100%;
+            transform-origin: center center;
+            transition: transform 2.5s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: transform;
+        }
+
+        svg.main-svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* SVG Art Styles */
+        .moon { fill: #fff8e7; filter: drop-shadow(0 0 15px rgba(255, 248, 231, 0.4)); }
+        .cloud { fill: rgba(255, 255, 255, 0.05); }
+        .ground { fill: #0b0d19; }
+        .bench { fill: #1d1826; stroke: #0f0b14; stroke-width: 2; }
+
+        /* Character Colors */
+        .skin { fill: #f3cbb4; }
+        .skin-dark { fill: #e0b097; }
+        .girl-hair { fill: #2c1b18; }
+        .girl-clothes { fill: #5c435a; }
+        .girl-pants { fill: #383446; }
+        .boy-hair { fill: #1e1b18; }
+        .boy-clothes { fill: #3a4756; }
+        .boy-pants { fill: #232936; }
+        .eye { fill: #2a2228; }
+        .tear { fill: #aadaff; opacity: 0; }
+        .blush { fill: #ff8b88; opacity: 0.3; }
+
+        /* UI Overlay Layer */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        /* Scene 0 Screen */
+        .start-screen {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            background: #060812;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 30px;
+            transition: opacity 2s ease, visibility 2s ease;
+        }
+
+        .start-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .start-title {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+            color: #ffffff;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeInStep 1.5s forwards 0.5s;
+        }
+
+        .start-subtitle {
+            font-family: var(--font-serif);
+            font-size: 1.05rem;
+            font-style: italic;
+            color: #a0a5c0;
+            margin-bottom: 40px;
+            max-width: 320px;
+            line-height: 1.5;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeInStep 1.5s forwards 1.8s;
+        }
+
+        .btn-start {
+            pointer-events: auto;
+            background: transparent;
+            border: 1px solid rgba(255, 183, 178, 0.4);
+            color: #ffb7b2;
+            padding: 14px 36px;
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            letter-spacing: 1.5px;
+            border-radius: 30px;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.4s ease;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeInStep 1.5s forwards 3s;
+            box-shadow: 0 0 15px rgba(255, 183, 178, 0.1);
+        }
+
+        .btn-start:hover, .btn-start:active {
+            background: rgba(255, 183, 178, 0.15);
+            border-color: rgba(255, 183, 178, 0.8);
+            box-shadow: 0 0 25px rgba(255, 183, 178, 0.3);
+            transform: scale(1.02);
+        }
+
+        /* Dialogue Box */
+        .dialogue-container {
+            margin-top: 10vh;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+            min-height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dialogue-text {
+            font-family: var(--font-serif);
+            font-size: 1.15rem;
+            line-height: 1.6;
+            color: #f5ebf7;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.7);
+            opacity: 0;
+            transform: translateY(6px);
+            transition: opacity 1.2s ease, transform 1.2s ease;
+        }
+
+        .dialogue-text.speaker-boy {
+            color: #d1e4ff;
+        }
+        .dialogue-text.speaker-girl {
+            color: #ffdce5;
+        }
+
+        .dialogue-text.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* End Letter Card */
+        .end-card {
+            position: absolute;
+            inset: 0;
+            z-index: 15;
+            background: rgba(8, 10, 20, 0.88);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px 24px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 2.5s ease, visibility 2.5s ease;
+            pointer-events: none;
+        }
+
+        .end-card.visible {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .card-inner {
+            max-width: 440px;
+            width: 100%;
+            background: rgba(26, 23, 38, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 32px 24px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .card-title {
+            font-family: var(--font-serif);
+            font-size: 1.5rem;
+            color: #ffb7b2;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            font-weight: 300;
+        }
+
+        .card-body {
+            font-family: var(--font-serif);
+            font-size: 0.95rem;
+            line-height: 1.8;
+            color: #e2dbf0;
+            margin-bottom: 24px;
+            white-space: pre-line;
+            font-style: italic;
+        }
+
+        .card-sub {
+            font-family: var(--font-serif);
+            font-size: 1.05rem;
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        .heart-icon {
+            display: inline-block;
+            color: #ff6b81;
+            font-size: 1.4rem;
+            animation: pulse 1.8s infinite;
+        }
+
+        .btn-replay {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #a0a5c0;
+            padding: 8px 24px;
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+        .btn-replay:hover {
+            color: #fff;
+            border-color: rgba(255,255,255,0.5);
+        }
+
+        @keyframes fadeInStep {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .camera-viewport, .dialogue-text, #app {
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <canvas id="starsCanvas"></canvas>
+        <canvas id="particleCanvas"></canvas>
+
+        <!-- Scene 0 Opening Overlay -->
+        <div class="start-screen" id="startScreen">
+            <h1 class="start-title">For Mi Reina...</h1>
+            <p class="start-subtitle">«For the moments when your heart feels tired.»</p>
+            <button class="btn-start" id="btnStart" onclick="initMovie()">Come here...</button>
+        </div>
+
+        <!-- Dynamic Dialogue Layer -->
+        <div class="ui-layer">
+            <div class="dialogue-container">
+                <div class="dialogue-text" id="dialogueBox"></div>
+            </div>
+        </div>
+
+        <!-- End Story Card -->
+        <div class="end-card" id="endCard">
+            <div class="card-inner">
+                <h2 class="card-title">For My Mi Reina</h2>
+                <div class="card-body">«I may not be able to remove every difficult thing from your life.
+
+But I can stay beside you while you get through it.
+
+When you are tired, rest.
+When you need to cry, cry.
+When you don't have words, you don't need them.
+
+And when loneliness tells you that you're alone...
+
+Remember me.
+I am here.»</div>
+                <div class="card-sub">Always, Mi Reina.</div>
+                <div><span class="heart-icon">♥</span></div>
+                <br>
+                <button class="btn-replay" onclick="resetMovie()">Watch again</button>
+            </div>
+        </div>
+
+        <!-- Cinematic Animated Camera Viewport -->
+        <div class="stage">
+            <div class="camera-viewport" id="camera">
+                <svg class="main-svg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
+                    <defs>
+                        <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="#fff8e7" stop-opacity="1" />
+                            <stop offset="30%" stop-color="#fff8e7" stop-opacity="0.4" />
+                            <stop offset="100%" stop-color="#fff8e7" stop-opacity="0" />
+                        </radialGradient>
+                        <linearGradient id="warmBgOverlay" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#5a3b4c" stop-opacity="0"/>
+                            <stop offset="100%" stop-color="#5a3b4c" stop-opacity="0.35"/>
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Background Environment -->
+                    <rect id="bgWarmth" x="0" y="0" width="1000" height="600" fill="url(#warmBgOverlay)" style="opacity: 0; transition: opacity 4s ease;" />
+                    <circle cx="820" cy="120" r="80" fill="url(#moonGlow)" />
+                    <circle cx="820" cy="120" r="35" class="moon" />
+                    <path class="cloud" d="M720,130 Q750,110 790,125 Q820,105 860,120 Q890,110 920,130 Z" />
+                    
+                    <!-- Ground Horizon -->
+                    <path class="ground" d="M-50,480 Q250,465 500,475 T1050,470 L1050,650 L-50,650 Z" />
+
+                    <!-- Bench Scene Anchor (Centered at X:450 - X:650) -->
+                    <g id="benchGroup">
+                        <path class="bench" d="M 430,475 L 430,370 L 440,370 L 440,465 L 610,465 L 610,370 L 620,370 L 620,475 Z" />
+                        <!-- Seat Planks -->
+                        <rect class="bench" x="420" y="415" width="210" height="12" rx="3" />
+                        <rect class="bench" x="420" y="430" width="210" height="12" rx="3" />
+                        <!-- Backrest Planks -->
+                        <rect class="bench" x="420" y="360" width="210" height="14" rx="3" />
+                        <rect class="bench" x="420" y="380" width="210" height="14" rx="3" />
+                    </g>
+
+                    <!-- ARTICULATED CHARACTER: GIRL (Sitting on Bench at X: 480) -->
+                    <g id="girl" transform="translate(480, 420)">
+                        <!-- Shadows -->
+                        <ellipse cx="0" cy="50" rx="25" ry="6" fill="#000" opacity="0.4" />
+
+                        <!-- Legs (Sitting Position) -->
+                        <g id="girlLegs">
+                            <!-- Left Leg -->
+                            <g id="girlLegLeft">
+                                <path class="girl-pants" d="M -12,-10 L 10,-10 L 12,25 L -5,25 Z" /> <!-- Thigh -->
+                                <path class="girl-pants" d="M -5,22 L 12,22 L 8,50 L -3,50 Z" /> <!-- Shin -->
+                                <ellipse cx="2" cy="51" rx="7" ry="4" class="girl-pants" /> <!-- Foot -->
+                            </g>
+                            <!-- Right Leg -->
+                            <g id="girlLegRight">
+                                <path class="girl-pants" d="M -2,-10 L 20,-10 L 22,25 L 5,25 Z" />
+                                <path class="girl-pants" d="M 5,22 L 22,22 L 18,50 L 7,50 Z" />
+                                <ellipse cx="12" cy="51" rx="7" ry="4" class="girl-pants" />
+                            </g>
+                        </g>
+
+                        <!-- Torso & Head Assembly -->
+                        <g id="girlTorsoGroup" transform="translate(0, -10)">
+                            <!-- Torso -->
+                            <path id="girlTorso" class="girl-clothes" d="M -15,-45 L 15,-45 C 18,-20 15,-5 12,0 L -12,0 C -15,-5 -18,-20 -15,-45 Z" />
+                            
+                            <!-- Neck -->
+                            <rect class="skin" x="-4" y="-53" width="8" height="10" />
+
+                            <!-- Head (Root of Rotation for Head Movement) -->
+                            <g id="girlHead" transform="translate(0, -52)">
+                                <ellipse cx="0" cy="-12" rx="13" ry="15" class="skin" />
+                                <ellipse cx="2" cy="-8" rx="3" ry="2" class="blush" />
+                                
+                                <!-- Hair Back -->
+                                <path class="girl-hair" d="M -14,-15 C -16,-35 16,-35 14,-15 C 15,0 12,18 8,24 C 5,15 -14,15 -14,-15 Z" />
+
+                                <!-- Face Features -->
+                                <g id="girlFace">
+                                    <ellipse id="girlEyeLeft" class="eye" cx="-5" cy="-12" rx="1.8" ry="2" />
+                                    <ellipse id="girlEyeRight" class="eye" cx="5" cy="-12" rx="1.8" ry="2" />
+                                    <path id="girlEyebrows" d="M -8,-17 Q -5,-16 -2,-17 M 2,-17 Q 5,-16 8,-17" stroke="#2c1b18" stroke-width="1.2" fill="none" />
+                                    <path id="girlMouth" d="M -3,-5 Q 0,-4 3,-5" stroke="#b56765" stroke-width="1.2" fill="none" />
+                                    
+                                    <!-- Animated Tear Path -->
+                                    <path id="girlTear" class="tear" d="M -5,-9 C -5,-9 -7,-4 -5,-2 C -3,-4 -5,-9 -5,-9 Z" />
+                                </g>
+
+                                <!-- Hair Front/Bangs -->
+                                <path class="girl-hair" d="M -13,-18 C -8,-25 0,-20 13,-17 C 8,-23 -3,-26 -13,-18 Z" />
+                            </g>
+
+                            <!-- Left Arm -->
+                            <g id="girlArmLeft" transform="translate(-14, -40)">
+                                <path id="girlUpperArmLeft" class="girl-clothes" d="M -2,0 L 4,0 L 2,25 L -4,25 Z" />
+                                <g id="girlForearmLeftGroup" transform="translate(-1, 23)">
+                                    <path id="girlForearmLeft" class="skin" d="M -2,0 L 3,0 L 8,22 L 3,22 Z" />
+                                    <circle id="girlHandLeft" class="skin" cx="5" cy="23" r="3.5" />
+                                </g>
+                            </g>
+
+                            <!-- Right Arm -->
+                            <g id="girlArmRight" transform="translate(14, -40)">
+                                <path id="girlUpperArmRight" class="girl-clothes" d="M -4,0 L 2,0 L 4,25 L -2,25 Z" />
+                                <g id="girlForearmRightGroup" transform="translate(1, 23)">
+                                    <path id="girlForearmRight" class="skin" d="M -3,0 L 2,0 L -3,22 L -8,22 Z" />
+                                    <circle id="girlHandRight" class="skin" cx="-5.5" cy="23" r="3.5" />
+                                </g>
+                            </g>
+                        </g>
+                    </g>
+
+                    <!-- ARTICULATED CHARACTER: BOY (Starts Offscreen Right at X: 920) -->
+                    <g id="boy" transform="translate(920, 420)">
+                        <!-- Shadow -->
+                        <ellipse cx="0" cy="50" rx="22" ry="5" fill="#000" opacity="0.4" />
+
+                        <!-- Legs -->
+                        <g id="boyLegs">
+                            <!-- Left Leg -->
+                            <g id="boyLegLeft" transform="translate(-7, 0)">
+                                <g id="boyThighLeft">
+                                    <path class="boy-pants" d="M -6,0 L 6,0 L 5,30 L -5,30 Z" />
+                                    <g id="boyShinLeft" transform="translate(0, 28)">
+                                        <path class="boy-pants" d="M -5,0 L 5,0 L 4,28 L -4,28 Z" />
+                                        <path class="skin-dark" d="M -4,26 L 5,26 L 8,32 L -4,32 Z" /> <!-- Shoe -->
+                                    </g>
+                                </g>
+                            </g>
+                            <!-- Right Leg -->
+                            <g id="boyLegRight" transform="translate(7, 0)">
+                                <g id="boyThighRight">
+                                    <path class="boy-pants" d="M -6,0 L 6,0 L 5,30 L -5,30 Z" />
+                                    <g id="boyShinRight" transform="translate(0, 28)">
+                                        <path class="boy-pants" d="M -5,0 L 5,0 L 4,28 L -4,28 Z" />
+                                        <path class="skin-dark" d="M -4,26 L 5,26 L 8,32 L -4,32 Z" />
+                                    </g>
+                                </g>
+                            </g>
+  </g></g>
+
+                        <!-- Torso & Head Assembly -->
+                        <g id="boyTorsoGroup" transform="translate(0, 0)">
+                            <!-- Torso -->
+                            <path id="boyTorso" class="boy-clothes" d="M -17,-55 L 17,-55 C 19,-30 16,-5 13,0 L -13,0 C -16,-5 -19,-30 -17,-55 Z" />
+                            
+                            <!-- Neck -->
+                            <rect class="skin" x="-4.5" y="-63" width="9" height="10" />
+
+                            <!-- Head -->
+                            <g id="boyHead" transform="translate(0, -62)">
+                                <ellipse cx="0" cy="-13" rx="13.5" ry="15.5" class="skin" />
+                                <path class="boy-hair" d="M -15,-14 C -15,-36 15,-36 15,-14 C 15,-8 12,2 14,-10 C 8,-22 -8,-22 -14,-10 Z" />
+
+                                <!-- Face Features -->
+                                <g id="boyFace">
+                                    <ellipse class="eye" cx="-5" cy="-12" rx="1.8" ry="2" />
+                                    <ellipse class="eye" cx="5" cy="-12" rx="1.8" ry="2" />
+                                    <path d="M -7,-17 Q -4,-18 -1,-17 M 1,-17 Q 4,-18 7,-17" stroke="#1e1b18" stroke-width="1.2" fill="none" />
+                                    <path d="M -3,-4 Q 0,-3 3,-4" stroke="#a45c5a" stroke-width="1.2" fill="none" />
+                                </g>
+                            </g>
+
+                            <!-- Left Arm -->
+                            <g id="boyArmLeft" transform="translate(-16, -50)">
+                                <g id="boyUpperArmLeft">
+                                    <path class="boy-clothes" d="M -3,0 L 3,0 L 2,26 L -3,26 Z" />
+                                    <g id="boyForearmLeftGroup" transform="translate(0, 24)">
+                                        <path id="boyForearmLeft" class="skin" d="M -2.5,0 L 2.5,0 L 2,24 L -2,24 Z" />
+                                        <circle id="boyHandLeft" class="skin" cx="0" cy="25" r="3.5" />
+                                    </g>
+                                </g>
+                            </g>
+
+                            <!-- Right Arm -->
+                            <g id="boyArmRight" transform="translate(16, -50)">
+                                <g id="boyUpperArmRight">
+                                    <path class="boy-clothes" d="M -3,0 L 3,0 L 3,26 L -2,26 Z" />
+                                    <g id="boyForearmRightGroup" transform="translate(0, 24)">
+                                        <path id="boyForearmRight" class="skin" d="M -2.5,0 L 2.5,0 L 2,24 L -2,24 Z" />
+                                        <circle id="boyHandRight" class="skin" cx="0" cy="25" r="3.5" />
+                                    </g>
+                                </g>
+                            </g>
+                        </g>
+                    </g>
+
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* --- CONFIGURATION & STATE ENGINE --- */
+        const state = {
+            isRunning: false,
+            reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+            particles: [],
+            stars: []
+        };
+
+        // DOM Cache
+        const camera = document.getElementById('camera');
+        const dialogueBox = document.getElementById('dialogueBox');
+        const startScreen = document.getElementById('startScreen');
+        const endCard = document.getElementById('endCard');
+        const bgWarmth = document.getElementById('bgWarmth');
+
+        // SVG Skeleton Joint Cache
+        const girl = {
+            root: document.getElementById('girl'),
+            head: document.getElementById('girlHead'),
+            torsoGroup: document.getElementById('girlTorsoGroup'),
+            eyebrows: document.getElementById('girlEyebrows'),
+            eyeLeft: document.getElementById('girlEyeLeft'),
+            eyeRight: document.getElementById('girlEyeRight'),
+            tear: document.getElementById('girlTear'),
+            armLeft: document.getElementById('girlArmLeft'),
+            forearmLeft: document.getElementById('girlForearmLeftGroup'),
+            armRight: document.getElementById('girlArmRight'),
+            forearmRight: document.getElementById('girlForearmRightGroup'),
+            legLeft: document.getElementById('girlLegLeft'),
+            legRight: document.getElementById('girlLegRight')
+        };
+
+        const boy = {
+            root: document.getElementById('boy'),
+            head: document.getElementById('boyHead'),
+            torsoGroup: document.getElementById('boyTorsoGroup'),
+            thighLeft: document.getElementById('boyThighLeft'),
+            shinLeft: document.getElementById('boyShinLeft'),
+            thighRight: document.getElementById('boyThighRight'),
+            shinRight: document.getElementById('boyShinRight'),
+            armLeft: document.getElementById('boyArmLeft'),
+            forearmLeft: document.getElementById('boyForearmLeftGroup'),
+            armRight: document.getElementById('boyArmRight'),
+            forearmRight: document.getElementById('boyForearmRightGroup')
+        };
+
+        /* --- BACKGROUND CANVAS ANIMATION --- */
+        const starsCanvas = document.getElementById('starsCanvas');
+        const starsCtx = starsCanvas.getContext('2d');
+        const particleCanvas = document.getElementById('particleCanvas');
+        const particleCtx = particleCanvas.getContext('2d');
+
+        function resizeCanvases() {
+            starsCanvas.width = particleCanvas.width = window.innerWidth;
+            starsCanvas.height = particleCanvas.height = window.innerHeight;
+            initStars();
+        }
+        window.addEventListener('resize', resizeCanvases);
+
+        function initStars() {
+            state.stars = [];
+            const count = Math.floor((window.innerWidth * window.innerHeight) / 3000);
+            for (let i = 0; i < count; i++) {
+                state.stars.push({
+                    x: Math.random() * starsCanvas.width,
+                    y: Math.random() * starsCanvas.height * 0.7,
+                    r: Math.random() * 1.2,
+                    alpha: Math.random(),
+                    speed: 0.005 + Math.random() * 0.01
+                });
+            }
+        }
+
+        function renderStars() {
+            starsCtx.clearRect(0, 0, starsCanvas.width, starsCanvas.height);
+            starsCtx.fillStyle = '#ffffff';
+            state.stars.forEach(s => {
+                s.alpha += s.speed;
+                if (s.alpha > 1 || s.alpha < 0.2) s.speed = -s.speed;
+                starsCtx.globalAlpha = Math.max(0.2, Math.min(1, s.alpha));
+                starsCtx.beginPath();
+                starsCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                starsCtx.fill();
+            });
+            requestAnimationFrame(renderStars);
+        }
+
+        function spawnHeartParticle(x, y) {
+            if (state.particles.length > 20) return;
+            state.particles.push({
+                x: x || window.innerWidth * (0.4 + Math.random() * 0.2),
+                y: y || window.innerHeight * 0.65,
+                size: 8 + Math.random() * 10,
+                vy: -0.5 - Math.random() * 0.8,
+                vx: (Math.random() - 0.5) * 0.3,
+                alpha: 1,
+                life: 0
+            });
+        }
+
+        function renderParticles() {
+            particleCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+            for (let i = state.particles.length - 1; i >= 0; i--) {
+                const p = state.particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life += 0.01;
+                p.alpha = 1 - (p.life / 3);
+
+                if (p.alpha <= 0) {
+                    state.particles.splice(i, 1);
+                    continue;
+                }
+
+                particleCtx.save();
+                particleCtx.globalAlpha = Math.max(0, p.alpha);
+                particleCtx.fillStyle = '#ff8ca3';
+                particleCtx.translate(p.x, p.y);
+                // Draw Heart Path
+                particleCtx.beginPath();
+                const topCurveHeight = p.size * 0.3;
+                particleCtx.moveTo(0, topCurveHeight);
+                particleCtx.bezierCurveTo(0, 0, -p.size / 2, 0, -p.size / 2, topCurveHeight);
+                particleCtx.bezierCurveTo(-p.size / 2, (p.size + topCurveHeight) / 2, 0, p.size, 0, p.size);
+                particleCtx.bezierCurveTo(0, p.size, p.size / 2, (p.size + topCurveHeight) / 2, p.size / 2, topCurveHeight);
+                particleCtx.bezierCurveTo(p.size / 2, 0, 0, 0, 0, topCurveHeight);
+                particleCtx.fill();
+                particleCtx.restore();
+            }
+            requestAnimationFrame(renderParticles);
+        }
+
+        resizeCanvases();
+        renderStars();
+        renderParticles();
+
+        /* --- UTILITY & CAMERA SYSTEM --- */
+        const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        function setCamera(scale, x, y, duration = 2.5) {
+            camera.style.transition = `transform ${duration}s cubic-bezier(0.25, 1, 0.5, 1)`;
+            camera.style.transform = `scale(${scale}) translate(${x}px, ${y}px)`;
+        }
+
+        async function showDialogue(text, speaker = '', duration = 0) {
+            dialogueBox.className = 'dialogue-text';
+            if (speaker) dialogueBox.classList.add(`speaker-${speaker}`);
+            dialogueBox.textContent = text;
+            
+            // Reflow
+            void dialogueBox.offsetWidth;
+            dialogueBox.classList.add('visible');
+
+            if (duration > 0) {
+                await wait(duration);
+                await hideDialogue();
+            }
+        }
+
+        async function hideDialogue() {
+            dialogueBox.classList.remove('visible');
+            await wait(1000);
+        }
+
+        /* --- PROCEDURAL IDLE BREATHING ANIMATION --- */
+        let idleTime = 0;
+        function animateBreathing() {
+            if (state.isRunning) {
+                idleTime += 0.03;
+                const breath = Math.sin(idleTime) * 1.5;
+                
+                // Subtle chest heave for both when resting
+                if (!girl.isHugging) {
+                    girl.torsoGroup.style.transform = `translate(0px, ${-10 + breath * 0.5}px)`;
+                }
+                if (!boy.isWalking && !boy.isSitting) {
+                    boy.torsoGroup.style.transform = `translate(0px, ${breath * 0.5}px)`;
+                }
+            }
+            requestAnimationFrame(animateBreathing);
+        }
+        animateBreathing();
+
+        /* --- MAIN ANIMATION TIMELINE SCENARIOS --- */
+
+        async function initMovie() {
+            startScreen.classList.add('hidden');
+            state.isRunning = true;
+            await wait(1500);
+            await startMovieTimeline();
+        }
+
+        async function startMovieTimeline() {
+            await sceneOne();
+            await sceneTwo();
+            await sceneThree();
+            await boyWalks();
+            await boyStops();
+            await boySits();
+            await comfortConversation();
+            await handHolding();
+            await hugScene();
+            await finalMessage();
+        }
+
+        // SCENE 1: ALONE (Tired Girl)
+        async function sceneOne() {
+            // Wide shot focusing on loneliness
+            setCamera(1.1, -20, -10, 0);
+            
+            // Set Girl State: Exhausted
+            girl.head.style.transition = 'transform 3s ease';
+            girl.head.style.transform = 'translate(0px, -52px) rotate(12deg)';
+            girl.eyebrows.setAttribute('d', 'M -8,-15 Q -5,-16 -2,-15 M 2,-15 Q 5,-16 8,-15'); // Sad eyebrows
+
+            await wait(1000);
+            await showDialogue('«Some days are heavier than others.»', '', 3500);
+            await wait(800);
+            await showDialogue('«You smile...»', '', 2500);
+            await showDialogue('«...but inside, you\'re tired.»', '', 3500);
+            await wait(1000);
+        }
+
+        // SCENE 2: THE TEARS
+        async function sceneTwo() {
+            // Push camera closer to girl
+            setCamera(1.7, 80, -30, 3.5);
+
+            await wait(1500);
+            
+            // Lower head further
+            girl.head.style.transform = 'translate(0px, -50px) rotate(18deg)';
+            
+            // Tear Animation
+            girl.tear.style.transition = 'opacity 1.5s ease';
+            girl.tear.style.opacity = '0.9';
+
+            let tearY = -9;
+            const tearInterval = setInterval(() => {
+                tearY += 0.8;
+                girl.tear.setAttribute('d', `M -5,${tearY} C -5,${tearY} -7,${tearY+5} -5,${tearY+7} C -3,${tearY+5} -5,${tearY} -5,${tearY} Z`);
+                if (tearY > 8) {
+                    clearInterval(tearInterval);
+                    girl.tear.style.opacity = '0';
+                }
+            }, 50);
+
+            await showDialogue('«Maybe you\'ve been carrying more than you tell me.»', '', 3800);
+            await showDialogue('«Maybe you\'re tired of being strong.»', '', 3500);
+
+            // Wipe tear movement with arm
+            girl.armRight.style.transition = 'transform 1.5s ease';
+            girl.forearmRight.style.transition = 'transform 1.5s ease';
+            girl.armRight.style.transform = 'rotate(-70deg)';
+            girl.forearmRight.style.transform = 'rotate(-60deg)';
+
+            await wait(1500);
+            // Reset arm
+            girl.armRight.style.transform = 'rotate(0deg)';
+            girl.forearmRight.style.transform = 'rotate(0deg)';
+
+            await showDialogue('«And I wish I could take some of that weight from you.»', '', 4000);
+            await wait(1000);
+        }
+
+        // SCENE 3: BOY APPEARS
+        async function sceneThree() {
+            // Zoom out slightly to reveal background right
+            setCamera(1.3, -40, -15, 3);
+            await wait(1000);
+
+            // Boy pauses, notices her
+            boy.head.style.transition = 'transform 1.5s ease';
+            boy.head.style.transform = 'translate(0px, -62px) rotate(-8deg)';
+            await wait(2000);
+        }
+
+        // SCENE 4: REAL WALKING ANIMATION (No slide)
+        async function boyWalks() {
+            boy.isWalking = true;
+            const startX = 920;
+            const endX = 590; // Stops respectfully near bench
+            const duration = 6000; // 6 seconds
+            const startTime = performance.now();
+
+            if (state.reducedMotion) {
+                boy.root.setAttribute('transform', `translate(${endX}, 420)`);
+                return;
+            }
+
+            return new Promise(resolve => {
+                function step(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    // Current position
+                    const currentX = startX - (startX - endX) * progress;
+                    
+                    // Limb Rotation Kinetics (Walk Cycle Frequency)
+                    const angle = Math.sin(progress * Math.PI * 12) * 28;
+                    const bounce = Math.abs(Math.sin(progress * Math.PI * 12)) * 5;
+
+                    // Apply Transforms
+                    boy.root.setAttribute('transform', `translate(${currentX}, ${420 - bounce})`);
+                    
+                    // Leg Alternation
+                    boy.thighLeft.style.transform = `rotate(${angle}deg)`;
+                    boy.shinLeft.style.transform = `rotate(${Math.max(0, -angle * 0.8)}deg)`;
+                    boy.thighRight.style.transform = `rotate(${-angle}deg)`;
+                    boy.shinRight.style.transform = `rotate(${Math.max(0, angle * 0.8)}deg)`;
+
+                    // Arm Opposites
+                    boy.armLeft.style.transform = `rotate(${-angle * 0.7}deg)`;
+                    boy.armRight.style.transform = `rotate(${angle * 0.7}deg)`;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(step);
+                    } else {
+                        // Reset Joint Rotations on Stop
+                        boy.thighLeft.style.transform = 'rotate(0deg)';
+                        boy.shinLeft.style.transform = 'rotate(0deg)';
+                        boy.thighRight.style.transform = 'rotate(0deg)';
+                        boy.shinRight.style.transform = 'rotate(0deg)';
+                        boy.armLeft.style.transform = 'rotate(0deg)';
+                        boy.armRight.style.transform = 'rotate(0deg)';
+                        boy.isWalking = false;
+                        resolve();
+                    }
+                }
+                requestAnimationFrame(step);
+            });
+        }
+
+        // SCENE 5: BOY STOPS
+        async function boyStops() {
+            // Settle body
+            boy.root.setAttribute('transform', 'translate(590, 420)');
+            boy.head.style.transform = 'translate(0px, -62px) rotate(-4deg)';
+
+            await wait(1000);
+            await showDialogue('«Hey...»', 'boy', 2500);
+            await showDialogue('«I saw you sitting here.»', 'boy', 3000);
+            await showDialogue('«You don\'t have to explain anything.»', 'boy', 3800);
+            await wait(1000);
+        }
+
+        // SCENE 6: GIRL LOOKS UP & BOY SITS
+        async function boySits() {
+            // Girl looks up slowly
+            girl.head.style.transform = 'translate(0px, -52px) rotate(-4deg)';
+            girl.eyebrows.setAttribute('d', 'M -8,-16 Q -5,-16 -2,-16 M 2,-16 Q 5,-16 8,-16');
+
+            await showDialogue('«I\'m just tired...»', 'girl', 3000);
+            await showDialogue('«I know.»', 'boy', 2500);
+            await showDialogue('«Everything feels like too much.»', 'girl', 3200);
+            await showDialogue('«Then you don\'t have to carry it all right now.»', 'boy', 4000);
+
+            // Animate Boy Sitting Down (Knees bend, Torso lowers)
+            boy.isSitting = true;
+            boy.root.style.transition = 'transform 2s cubic-bezier(0.4, 0, 0.2, 1)';
+            boy.root.setAttribute('transform', 'translate(545, 420)'); // Move onto bench beside her
+
+            boy.thighLeft.style.transition = 'transform 2s ease';
+            boy.thighRight.style.transition = 'transform 2s ease';
+            boy.shinLeft.style.transition = 'transform 2s ease';
+            boy.shinRight.style.transition = 'transform 2s ease';
+
+            // Sitting angles
+            boy.thighLeft.style.transform = 'rotate(-85deg)';
+            boy.shinLeft.style.transform = 'rotate(85deg)';
+            boy.thighRight.style.transform = 'rotate(-85deg)';
+            boy.shinRight.style.transform = 'rotate(85deg)';
+            
+            // Adjust torso lower
+            boy.torsoGroup.style.transition = 'transform 2s ease';
+            boy.torsoGroup.style.transform = 'translate(0px, 15px)';
+
+            // Camera moves closer to bench pair
+            setCamera(1.8, -25, -25, 3);
+            await wait(2500);
+        }
+
+        // SCENE 7: SILENCE & COMFORT
+        async function comfortConversation() {
+            // 3 seconds of meaningful silence with background breathing
+            await wait(3000);
+
+            await showDialogue('«You can cry.»', 'boy', 2500);
+            await showDialogue('«You can be tired.»', 'boy', 2500);
+            await showDialogue('«You can have a bad day.»', 'boy', 2800);
+            await showDialogue('«You don\'t have to pretend with me.»', 'boy', 3800);
+            await wait(1200);
+        }
+
+        // SCENE 8: HAND HOLDING
+        async function handHolding() {
+            // Boy extends left hand towards girl
+            boy.armLeft.style.transition = 'transform 1.8s ease';
+            boy.forearmLeft.style.transition = 'transform 1.8s ease';
+            boy.armLeft.style.transform = 'rotate(-35deg)';
+    await wait(1500);
+
+            // Girl looks down at his hand, then accepts
+            girl.armRight.style.transition = 'transform 1.8s ease';
+            girl.forearmRight.style.transition = 'transform 1.8s ease';
+            girl.armRight.style.transform = 'rotate(25deg)';
+            girl.forearmRight.style.transform = 'rotate(30deg)';
+
+            await showDialogue('«I\'m not here to fix everything.»', 'boy', 3500);
+            await showDialogue('«I\'m just here to stay.»', 'boy', 3500);
+            await wait(1000);
+        }
+
+        // SCENE 9: THE HUG & ENVIRONMENT WARMTH
+        async function hugScene() {
+            girl.isHugging = true;
+
+            // Warmth transition
+            bgWarmth.style.opacity = '1';
+            document.documentElement.style.setProperty('--bg-bottom', '#493344');
+
+            // Shift boy closer
+            boy.root.setAttribute('transform', 'translate(525, 420)');
+
+            // Arm Wrapping Kinetics
+            boy.armLeft.style.transform = 'rotate(-65deg)';
+            boy.forearmLeft.style.transform = 'rotate(-55deg)';
+            boy.armRight.style.transform = 'rotate(-75deg)';
+            boy.forearmRight.style.transform = 'rotate(-40deg)';
+
+            // Girl moves into his chest & wraps arms
+            girl.torsoGroup.style.transition = 'transform 2s ease';
+            girl.torsoGroup.style.transform = 'translate(15px, 10px) rotate(-8deg)';
+
+            girl.armLeft.style.transition = 'transform 2s ease';
+            girl.armRight.style.transition = 'transform 2s ease';
+            girl.armLeft.style.transform = 'rotate(-50deg)';
+            girl.armRight.style.transform = 'rotate(-65deg)';
+
+            // Girl closes eyes in peace
+            girl.eyeLeft.setAttribute('ry', '0.3');
+            girl.eyeRight.setAttribute('ry', '0.3');
+
+            // Camera tight hug shot
+            setCamera(2.2, -45, -30, 4);
+
+            // Trigger floating heart particles during hug
+            const heartInterval = setInterval(() => {
+                spawnHeartParticle();
+            }, 600);
+
+            await wait(2000);
+
+            await showDialogue('«I\'ve got you.»', 'boy', 3000);
+            await showDialogue('«You can rest here.»', 'boy', 3000);
+            await showDialogue('«Thank you for staying.»', 'girl', 3200);
+            await showDialogue('«Always.»', 'boy', 3000);
+
+            // Let scene breathe for 6 seconds in hug
+            await wait(6000);
+            clearInterval(heartInterval);
+        }
+
+        // SCENE 10: FINAL ZOOM OUT & MESSAGE CARD
+        async function finalMessage() {
+            await hideDialogue();
+
+            // Slow cinematic zoom out
+            setCamera(1.0, 0, 0, 6);
+            await wait(4000);
+
+            // Display Final Serif Letter Card
+            endCard.classList.add('visible');
+        }
+
+        function resetMovie() {
+            window.location.reload();
+        }
+    </script>
+</body>
+</html>
